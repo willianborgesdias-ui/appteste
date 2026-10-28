@@ -1,0 +1,1729 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>FinanAutônomo | Controle Financeiro PF & PJ</title>
+    <meta name="description" content="Gestão financeira inteligente para autônomos e motoboys com separação PF/PJ, alerta de manutenção da moto e relatórios DRE." />
+    <meta name="theme-color" content="#020617" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+    <!-- Tailwind CSS (CDN para execução direta em arquivo único / Cloudflare Pages) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                50: '#ecfdf5',
+                100: '#d1fae5',
+                500: '#10b981',
+                600: '#059669',
+                700: '#047857',
+              },
+              pj: {
+                DEFAULT: '#10b981',
+                dark: '#059669',
+                bg: '#022c22'
+              },
+              pf: {
+                DEFAULT: '#3b82f6',
+                dark: '#2563eb',
+                bg: '#172554'
+              }
+            }
+          }
+        }
+      }
+    </script>
+
+    <!-- React 18, ReactDOM 18 & Babel Standalone para rodar tudo no próprio index.html -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+      
+      body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      }
+      .font-mono {
+        font-family: 'JetBrains Mono', monospace;
+      }
+
+      /* Custom scrollbar */
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #020617;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #1e293b;
+        border-radius: 9999px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #334155;
+      }
+
+      @media print {
+        body {
+          background-color: #ffffff !important;
+          color: #0f172a !important;
+        }
+        .no-print {
+          display: none !important;
+        }
+        .print-only {
+          display: block !important;
+        }
+        .card-print {
+          background-color: #ffffff !important;
+          border: 1px solid #cbd5e1 !important;
+          color: #0f172a !important;
+          box-shadow: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body class="bg-slate-950 text-slate-100 antialiased min-h-screen selection:bg-emerald-500 selection:text-white">
+    <div id="root">
+      <div class="flex items-center justify-center min-h-screen">
+        <div class="text-center p-8">
+          <div class="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p class="text-slate-400 font-medium">Carregando FinanAutônomo...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- CÓDIGO FONTE COMPLETO CONSOLIDADO EM UMA PÁGINA SÓ (INDEX.HTML) -->
+    <script type="text/babel">
+      const { useState, useEffect, useMemo, useRef } = React;
+
+      // ==========================================
+      // ÍCONES SVG EMBUTIDOS (100% STANDALONE)
+      // ==========================================
+      const Icon = ({ name, className = "w-5 h-5", ...props }) => {
+        const icons = {
+          bike: (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+              <circle cx="5.5" cy="17.5" r="3.5" />
+              <circle cx="18.5" cy="17.5" r="3.5" />
+              <path d="M15 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm-3 11.5L9 6H6" />
+              <path d="M12 17.5V14l-3-3 4-3 2 3h4" />
+            </svg>
+          ),
+          wallet: (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+              <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
+              <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
+              <path d="M18 12a2 2 0 0 0 0 4h4v-4Z" />
+            </svg>
+          ),
+          trendingUp: (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+              <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+              <polyline points="17 6 23 6 23 12" />
+            </svg>
+          ),
+          trendingDown: (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+              <polyline points="23 18 13.5 8.5 8.5 13.5 1 6" />
+              <polyline points="17 18 23 18 23 12" />
+            </svg>
+          ),
+          gauge: (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+              <path d="m12 14 4-4" />
+              <path d="M3.34 19a10 10 0 1 1 17.32 0" />
+            </svg>
+          ),
+          wrench: (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+              <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+            </svg>
+          ),
+          fileText: (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+              <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="16" y1="13" x2="8" y2="13" />
+              <line x1="16" y1="17" x2="8" y2="17" />
+              <line x1="10" y1="9" x2="8" y2="9" />
+            </svg>
+          ),
+          plus: (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+          ),
+          search: (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          ),
+          filter: (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+            </svg>
+          ),
+          download: (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+          ),
+          printer: (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+              <polyline points="6 9 6 2 18 2 18 9" />
+              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+              <rect x="6" y="14" width="12" height="8" />
+            </svg>
+          ),
+          user: (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
+          ),
+          logout: (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+          ),
+          trash: (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+              <polyline points="3 6 5 6 21 6" />
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+            </svg>
+          ),
+          edit: (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+              <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+            </svg>
+          ),
+          alertTriangle: (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+              <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+              <line x1="12" y1="9" x2="12" y2="13" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+          ),
+          checkCircle: (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+              <polyline points="22 4 12 14.01 9 11.01" />
+            </svg>
+          ),
+          fuel: (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+              <line x1="3" y1="22" x2="15" y2="22" />
+              <line x1="4" y1="9" x2="14" y2="9" />
+              <path d="M14 22V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v18" />
+              <path d="M14 13h2a2 2 0 0 1 2 2v2a2 2 0 0 0 2 2a2 2 0 0 0 2-2V9.83a2 2 0 0 0-.59-1.42L18 5" />
+            </svg>
+          ),
+          cloud: (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+              <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" />
+            </svg>
+          ),
+          close: (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          )
+        };
+        return icons[name] || icons.wallet;
+      };
+
+      // Formatador de Moeda R$
+      const formatCurrency = (val) => {
+        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(val) || 0);
+      };
+
+      // Formatador de Data
+      const formatDate = (dateStr) => {
+        if (!dateStr) return '';
+        const [year, month, day] = dateStr.split('-');
+        if (year && month && day) return `${day}/${month}/${year}`;
+        return dateStr;
+      };
+
+      // ==========================================
+      // DADOS INICIAIS DE EXEMPLO (WILLIAM / 1234)
+      // ==========================================
+      const INITIAL_USER = {
+        id: 1,
+        username: 'william',
+        password: '1234',
+        name: 'William Motoboy Pro',
+        occupation: 'Entregador Autônomo & Motofretista',
+        motoModel: 'Honda CG 160 Fan ESD 2024',
+        motoPlate: 'BRA-9S21',
+        currentOdometer: 48320,
+        monthlyRevenueGoal: 4500,
+        isDarkMode: true
+      };
+
+      const INITIAL_TRANSACTIONS = [
+        { id: 'tx-1', userId: 1, description: 'Diária Entregas iFood & Zé Delivery', amount: 185.00, date: '2026-10-28', accountType: 'PJ', type: 'INCOME', category: 'Entregas', paymentMethod: 'PIX', notes: '42 km rodados no almoço + jantar' },
+        { id: 'tx-2', userId: 1, description: 'Gasolina Comum Posto Ipiranga', amount: 55.00, date: '2026-10-28', accountType: 'PJ', type: 'EXPENSE', category: 'Combustível', paymentMethod: 'Cartão Débito', odometerKm: 48320, notes: 'Tanque cheio 9.2L' },
+        { id: 'tx-3', userId: 1, description: 'Almoço PF Marmitex Centro', amount: 22.00, date: '2026-10-28', accountType: 'PJ', type: 'EXPENSE', category: 'Alimentação Rua', paymentMethod: 'PIX', notes: 'Pausa das 13h' },
+        { id: 'tx-4', userId: 1, description: 'Corrida Particular Entrega de Peça', amount: 75.00, date: '2026-10-27', accountType: 'PJ', type: 'INCOME', category: 'Frete Particular', paymentMethod: 'Dinheiro', notes: 'Cliente oficina mecânica' },
+        { id: 'tx-5', userId: 1, description: 'Supermercado Mensal Pessoal', amount: 320.00, date: '2026-10-27', accountType: 'PF', type: 'EXPENSE', category: 'Mercado', paymentMethod: 'Cartão Débito', notes: 'Compras do mês em família' },
+        { id: 'tx-6', userId: 1, description: 'Lalamove Entregas Express', amount: 140.00, date: '2026-10-26', accountType: 'PJ', type: 'INCOME', category: 'Entregas', paymentMethod: 'PIX', notes: '8 entregas na zona sul' },
+        { id: 'tx-7', userId: 1, description: 'Troca Pastilha Freio Dianteiro Cobreq', amount: 68.00, date: '2026-10-25', accountType: 'PJ', type: 'EXPENSE', category: 'Manutenção Moto', paymentMethod: 'Cartão Crédito', odometerKm: 48100, notes: 'Troca na oficina do Zé' },
+        { id: 'tx-8', userId: 1, description: 'Guia DAS MEI Outubro/2026', amount: 75.60, date: '2026-10-20', accountType: 'PJ', type: 'EXPENSE', category: 'MEI / DAS', paymentMethod: 'PIX', notes: 'Contribuição INSS e impostos em dia' },
+        { id: 'tx-9', userId: 1, description: 'Plano Celular Claro 5G Pessoal & Trabalho', amount: 49.90, date: '2026-10-18', accountType: 'PF', type: 'EXPENSE', category: 'Contas Fixas', paymentMethod: 'PIX', notes: 'Internet 30GB' },
+        { id: 'tx-10', userId: 1, description: 'Entregas Mercado Livre Envio Rápido', amount: 210.00, date: '2026-10-16', accountType: 'PJ', type: 'INCOME', category: 'Entregas', paymentMethod: 'PIX', notes: 'Rota fechada período manhã' }
+      ];
+
+      const INITIAL_MAINTENANCE = [
+        { id: 'm-oil', name: 'Óleo do Motor (10W30 Mobil/Yamalube)', intervalKm: 1500, lastServiceKm: 47100, estimatedCost: 45.00 },
+        { id: 'm-chain', name: 'Kit Relação (Corrente, Coroa, Pinhão)', intervalKm: 12000, lastServiceKm: 38000, estimatedCost: 190.00 },
+        { id: 'm-brake', name: 'Pastilhas e Lonas de Freio', intervalKm: 8000, lastServiceKm: 42000, estimatedCost: 75.00 },
+        { id: 'm-tire', name: 'Pneu Traseiro (Pirelli City Demon)', intervalKm: 15000, lastServiceKm: 35000, estimatedCost: 260.00 },
+        { id: 'm-spark', name: 'Vela de Ignição (NGK)', intervalKm: 10000, lastServiceKm: 45000, estimatedCost: 35.00 },
+        { id: 'm-filter', name: 'Filtro de Ar do Motor', intervalKm: 8000, lastServiceKm: 44000, estimatedCost: 40.00 }
+      ];
+
+      // ==========================================
+      // COMPONENTE PRINCIPAL (APP CONSOLIDADO)
+      // ==========================================
+      function App() {
+        // Carrega estado do localStorage ou dados iniciais
+        const [user, setUser] = useState(() => {
+          const saved = localStorage.getItem('finan_user');
+          return saved ? JSON.parse(saved) : INITIAL_USER;
+        });
+
+        const [isLoggedIn, setIsLoggedIn] = useState(() => {
+          return localStorage.getItem('finan_auth') === 'true';
+        });
+
+        const [transactions, setTransactions] = useState(() => {
+          const saved = localStorage.getItem('finan_txs');
+          return saved ? JSON.parse(saved) : INITIAL_TRANSACTIONS;
+        });
+
+        const [maintenanceItems, setMaintenanceItems] = useState(() => {
+          const saved = localStorage.getItem('finan_maintenance');
+          return saved ? JSON.parse(saved) : INITIAL_MAINTENANCE;
+        });
+
+        // Filtros e Navegação
+        const [accountFilter, setAccountFilter] = useState('ALL'); // ALL, PF, PJ
+        const [txTypeFilter, setTxTypeFilter] = useState('ALL'); // ALL, INCOME, EXPENSE
+        const [searchQuery, setSearchQuery] = useState('');
+
+        // Modais
+        const [isTxModalOpen, setIsTxModalOpen] = useState(false);
+        const [editingTx, setEditingTx] = useState(null);
+        const [isOdometerModalOpen, setIsOdometerModalOpen] = useState(false);
+        const [newOdometerVal, setNewOdometerVal] = useState(user.currentOdometer);
+        const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+        const [isCloudflareModalOpen, setIsCloudflareModalOpen] = useState(false);
+        const [serviceToLog, setServiceToLog] = useState(null);
+
+        // Formulário de Login
+        const [loginUsername, setLoginUsername] = useState('william');
+        const [loginPassword, setLoginPassword] = useState('1234');
+        const [loginError, setLoginError] = useState('');
+
+        // Salvar persistência
+        useEffect(() => {
+          localStorage.setItem('finan_user', JSON.stringify(user));
+        }, [user]);
+
+        useEffect(() => {
+          localStorage.setItem('finan_auth', isLoggedIn ? 'true' : 'false');
+        }, [isLoggedIn]);
+
+        useEffect(() => {
+          localStorage.setItem('finan_txs', JSON.stringify(transactions));
+        }, [transactions]);
+
+        useEffect(() => {
+          localStorage.setItem('finan_maintenance', JSON.stringify(maintenanceItems));
+        }, [maintenanceItems]);
+
+        // Handlers de Auth
+        const handleLogin = (e) => {
+          e.preventDefault();
+          if (loginUsername.trim().toLowerCase() === user.username.toLowerCase() && loginPassword.trim() === user.password) {
+            setIsLoggedIn(true);
+            setLoginError('');
+          } else {
+            setLoginError('Usuário ou senha inválidos. Dica: william / 1234');
+          }
+        };
+
+        const handleLogout = () => {
+          setIsLoggedIn(false);
+        };
+
+        // Cálculos Financeiros
+        const totals = useMemo(() => {
+          let pfIncome = 0, pfExpense = 0;
+          let pjIncome = 0, pjExpense = 0;
+          let fuelCost = 0, maintenanceCost = 0;
+
+          transactions.forEach(t => {
+            const amt = Number(t.amount) || 0;
+            if (t.accountType === 'PF') {
+              if (t.type === 'INCOME') pfIncome += amt;
+              else pfExpense += amt;
+            } else {
+              if (t.type === 'INCOME') pjIncome += amt;
+              else {
+                pjExpense += amt;
+                if (t.category === 'Combustível') fuelCost += amt;
+                if (t.category === 'Manutenção Moto') maintenanceCost += amt;
+              }
+            }
+          });
+
+          const totalIncome = pfIncome + pjIncome;
+          const totalExpense = pfExpense + pjExpense;
+          const pfBalance = pfIncome - pfExpense;
+          const pjBalance = pjIncome - pjExpense;
+          const totalBalance = totalIncome - totalExpense;
+
+          const pjProfitMargin = pjIncome > 0 ? ((pjBalance / pjIncome) * 100).toFixed(1) : 0;
+          const goalPercent = Math.min(100, Math.round((pjIncome / (user.monthlyRevenueGoal || 1)) * 100));
+
+          return {
+            pfIncome, pfExpense, pfBalance,
+            pjIncome, pjExpense, pjBalance,
+            totalIncome, totalExpense, totalBalance,
+            fuelCost, maintenanceCost,
+            pjProfitMargin, goalPercent
+          };
+        }, [transactions, user.monthlyRevenueGoal]);
+
+        // Manutenções calculadas
+        const maintenanceStatus = useMemo(() => {
+          return maintenanceItems.map(item => {
+            const kmTraveled = Math.max(0, user.currentOdometer - item.lastServiceKm);
+            const kmRemaining = item.intervalKm - kmTraveled;
+            const percentUsed = Math.min(150, Math.round((kmTraveled / item.intervalKm) * 100));
+
+            let status = 'safe'; // safe, warning, urgent
+            if (percentUsed >= 100) status = 'urgent';
+            else if (percentUsed >= 75) status = 'warning';
+
+            return {
+              ...item,
+              kmTraveled,
+              kmRemaining,
+              percentUsed,
+              status
+            };
+          });
+        }, [maintenanceItems, user.currentOdometer]);
+
+        const urgentCount = maintenanceStatus.filter(m => m.status === 'urgent' || m.status === 'warning').length;
+
+        // Transações filtradas
+        const filteredTransactions = useMemo(() => {
+          return transactions.filter(t => {
+            const matchAccount = accountFilter === 'ALL' || t.accountType === accountFilter;
+            const matchType = txTypeFilter === 'ALL' || t.type === txTypeFilter;
+            const matchSearch = !searchQuery || 
+              t.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              t.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              (t.notes && t.notes.toLowerCase().includes(searchQuery.toLowerCase()));
+
+            return matchAccount && matchType && matchSearch;
+          }).sort((a, b) => new Date(b.date) - new Date(a.date));
+        }, [transactions, accountFilter, txTypeFilter, searchQuery]);
+
+        // Ações de Transação (CRUD)
+        const handleSaveTransaction = (txData) => {
+          if (editingTx) {
+            setTransactions(prev => prev.map(t => t.id === editingTx.id ? { ...txData, id: t.id } : t));
+          } else {
+            const newTx = {
+              ...txData,
+              id: 'tx-' + Date.now(),
+              userId: user.id
+            };
+            setTransactions(prev => [newTx, ...prev]);
+
+            // Se a transação tem odômetro maior, atualiza a moto
+            if (txData.odometerKm && Number(txData.odometerKm) > user.currentOdometer) {
+              setUser(u => ({ ...u, currentOdometer: Number(txData.odometerKm) }));
+            }
+          }
+          setIsTxModalOpen(false);
+          setEditingTx(null);
+        };
+
+        const handleDeleteTransaction = (id) => {
+          if (window.confirm('Tem certeza que deseja excluir esta transação?')) {
+            setTransactions(prev => prev.filter(t => t.id !== id));
+          }
+        };
+
+        // Exportar CSV
+        const handleExportCSV = () => {
+          const headers = ['ID', 'Data', 'Conta', 'Tipo', 'Categoria', 'Descrição', 'Valor (R$)', 'Pagamento', 'KM', 'Notas'];
+          const rows = filteredTransactions.map(t => [
+            t.id,
+            t.date,
+            t.accountType,
+            t.type === 'INCOME' ? 'Receita' : 'Despesa',
+            t.category,
+            `"${t.description.replace(/"/g, '""')}"`,
+            t.amount.toFixed(2).replace('.', ','),
+            t.paymentMethod || '',
+            t.odometerKm || '',
+            `"${(t.notes || '').replace(/"/g, '""')}"`
+          ]);
+
+          const csvContent = '\uFEFF' + [headers.join(';'), ...rows.map(r => r.join(';'))].join('\n');
+          const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.setAttribute('href', url);
+          link.setAttribute('download', `extrato_finanautonomo_${new Date().toISOString().slice(0, 10)}.csv`);
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        };
+
+        // Atualizar Odômetro
+        const handleUpdateOdometer = (e) => {
+          e.preventDefault();
+          const val = Number(newOdometerVal);
+          if (val >= 0) {
+            setUser(u => ({ ...u, currentOdometer: val }));
+            setIsOdometerModalOpen(false);
+          }
+        };
+
+        // Registrar Troca de Peça
+        const handleServiceMaintenance = (item) => {
+          const cost = item.estimatedCost || 50;
+          if (window.confirm(`Confirmar registro de troca de "${item.name}" no KM atual (${user.currentOdometer} km)?\n\nIsso atualizará o odômetro da peça e gerará automaticamente uma despesa PJ de ${formatCurrency(cost)}.`)) {
+            // Atualiza KM da peça
+            setMaintenanceItems(prev => prev.map(m => m.id === item.id ? { ...m, lastServiceKm: user.currentOdometer } : m));
+            // Gera despesa
+            const newTx = {
+              id: 'tx-maint-' + Date.now(),
+              userId: user.id,
+              description: `Manutenção: Troca de ${item.name}`,
+              amount: cost,
+              date: new Date().toISOString().slice(0, 10),
+              accountType: 'PJ',
+              type: 'EXPENSE',
+              category: 'Manutenção Moto',
+              paymentMethod: 'PIX',
+              odometerKm: user.currentOdometer,
+              notes: `Troca preventiva aos ${user.currentOdometer} km`
+            };
+            setTransactions(prev => [newTx, ...prev]);
+          }
+        };
+
+        // Download do arquivo index.html standalone
+        const handleDownloadSingleFile = () => {
+          const htmlContent = document.documentElement.outerHTML;
+          const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8;' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'index.html';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        };
+
+        // ==========================================
+        // TELA DE LOGIN SE NÃO ESTIVER AUTENTICADO
+        // ==========================================
+        if (!isLoggedIn) {
+          return (
+            <div class="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4">
+              <div class="w-full max-w-md bg-slate-900/90 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
+                {/* Logo e Cabeçalho */}
+                <div class="text-center mb-8">
+                  <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 mb-4 shadow-lg shadow-emerald-500/10">
+                    <Icon name="bike" className="w-9 h-9" />
+                  </div>
+                  <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">FinanAutônomo</h1>
+                  <p class="text-slate-400 text-sm mt-1">Gestão Financeira & Manutenção para Motoboys</p>
+                  <div class="inline-block mt-3 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full text-xs font-semibold">
+                    100% Página Única (index.html)
+                  </div>
+                </div>
+
+                {/* Formulário */}
+                <form onSubmit={handleLogin} class="space-y-4">
+                  {loginError && (
+                    <div class="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-rose-400 text-xs flex items-center gap-2">
+                      <Icon name="alertTriangle" className="w-4 h-4 flex-shrink-0" />
+                      <span>{loginError}</span>
+                    </div>
+                  )}
+
+                  <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Usuário</label>
+                    <div class="relative">
+                      <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                        <Icon name="user" className="w-5 h-5" />
+                      </div>
+                      <input
+                        type="text"
+                        value={loginUsername}
+                        onChange={(e) => setLoginUsername(e.target.value)}
+                        placeholder="william"
+                        required
+                        class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Senha</label>
+                    <div class="relative">
+                      <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                        <Icon name="wallet" className="w-5 h-5" />
+                      </div>
+                      <input
+                        type="password"
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                        placeholder="••••"
+                        required
+                        class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    class="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold py-3 px-4 rounded-xl shadow-lg shadow-emerald-500/25 transition-all transform active:scale-95 flex items-center justify-center gap-2 mt-2"
+                  >
+                    <span>Entrar no Sistema</span>
+                  </button>
+                </form>
+
+                {/* Card com credenciais pré-configuradas */}
+                <div class="mt-6 p-4 bg-slate-950 border border-slate-800/80 rounded-xl">
+                  <div class="flex items-center justify-between text-xs text-slate-400 mb-2">
+                    <span class="font-semibold text-slate-300">Credenciais Cadastradas:</span>
+                    <span class="text-emerald-400 font-mono">1-Clique</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setLoginUsername('william'); setLoginPassword('1234'); }}
+                    class="w-full text-left p-2.5 rounded-lg bg-slate-900 hover:bg-slate-800/70 border border-slate-800 transition flex items-center justify-between group"
+                  >
+                    <div>
+                      <p class="text-xs font-bold text-white group-hover:text-emerald-400 transition-colors">william</p>
+                      <p class="text-[11px] text-slate-400 font-mono">Senha: 1234 (Honda CG 160)</p>
+                    </div>
+                    <span class="text-xs text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded font-medium">Preencher</span>
+                  </button>
+                </div>
+
+                <div class="mt-6 text-center text-xs text-slate-500">
+                  Pronto para hospedar direto no Cloudflare Pages ou rodar offline no navegador.
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        // ==========================================
+        // APLICAÇÃO COMPLETA QUANDO AUTENTICADO
+        // ==========================================
+        return (
+          <div class="min-h-screen bg-slate-950 text-slate-100 flex flex-col pb-24 md:pb-12">
+            {/* TOPO: BARRA DE NAVEGAÇÃO SUPERIOR */}
+            <header class="sticky top-0 z-40 bg-slate-950/90 backdrop-blur-md border-b border-slate-800/80 px-4 sm:px-6 py-3">
+              <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
+                {/* Logo & Marca */}
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shadow-sm shadow-emerald-500/10">
+                    <Icon name="bike" className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <span class="font-extrabold text-base sm:text-lg text-white tracking-tight">FinanAutônomo</span>
+                      <span class="hidden sm:inline-block px-2 py-0.5 text-[10px] font-bold bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full uppercase tracking-wider">
+                        1 Página
+                      </span>
+                    </div>
+                    <p class="text-xs text-slate-400 hidden sm:block">Controle PF & PJ • Moto & Manutenção</p>
+                  </div>
+                </div>
+
+                {/* Links rápidos para rolagem suave */}
+                <nav class="hidden lg:flex items-center gap-1 bg-slate-900 border border-slate-800 p-1 rounded-xl text-xs font-semibold">
+                  <a href="#section-dashboard" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">1. Painel</a>
+                  <a href="#section-transactions" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">2. Extrato</a>
+                  <a href="#section-maintenance" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition flex items-center gap-1.5">
+                    3. Moto
+                    {urgentCount > 0 && (
+                      <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+                    )}
+                  </a>
+                  <a href="#section-reports" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">4. DRE & Lucro</a>
+                </nav>
+
+                {/* Ações da Direita: Perfil, Cloudflare e Sair */}
+                <div class="flex items-center gap-2">
+                  <button
+                    onClick={() => setIsCloudflareModalOpen(true)}
+                    title="Informações de Deploy Cloudflare"
+                    class="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition flex items-center gap-1.5 text-xs font-medium"
+                  >
+                    <Icon name="cloud" className="w-4 h-4 text-sky-400" />
+                    <span class="hidden sm:inline">Cloudflare</span>
+                  </button>
+
+                  <button
+                    onClick={() => setIsProfileModalOpen(true)}
+                    class="flex items-center gap-2 p-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-left transition"
+                  >
+                    <div class="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs">
+                      {user.name.charAt(0)}
+                    </div>
+                    <div class="hidden sm:block">
+                      <p class="text-xs font-semibold text-white leading-tight">{user.name}</p>
+                      <p class="text-[10px] text-slate-400 font-mono leading-tight">{user.currentOdometer.toLocaleString()} km</p>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={handleLogout}
+                    title="Sair"
+                    class="p-2 rounded-xl bg-slate-900 hover:bg-rose-500/10 border border-slate-800 hover:border-rose-500/30 text-slate-400 hover:text-rose-400 transition"
+                  >
+                    <Icon name="logout" className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </header>
+
+            {/* SELETOR DE CONTA: TODOS, PF, PJ */}
+            <div class="bg-slate-900/60 border-b border-slate-800/60 px-4 sm:px-6 py-2.5">
+              <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800">
+                  <button
+                    onClick={() => setAccountFilter('ALL')}
+                    class={`px-3 py-1 rounded-lg text-xs font-semibold transition ${accountFilter === 'ALL' ? 'bg-slate-800 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
+                  >
+                    Consolidado (Tudo)
+                  </button>
+                  <button
+                    onClick={() => setAccountFilter('PJ')}
+                    class={`px-3 py-1 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 ${accountFilter === 'PJ' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:text-emerald-400'}`}
+                  >
+                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    PJ (Entregas & Moto)
+                  </button>
+                  <button
+                    onClick={() => setAccountFilter('PF')}
+                    class={`px-3 py-1 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 ${accountFilter === 'PF' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'text-slate-400 hover:text-blue-400'}`}
+                  >
+                    <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                    PF (Pessoal)
+                  </button>
+                </div>
+
+                {/* Botões Rápidos */}
+                <div class="flex items-center gap-2">
+                  <button
+                    onClick={() => { setNewOdometerVal(user.currentOdometer); setIsOdometerModalOpen(true); }}
+                    class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white text-xs font-medium flex items-center gap-1.5 transition"
+                  >
+                    <Icon name="gauge" className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Odômetro: <strong class="text-white font-mono">{user.currentOdometer.toLocaleString()} km</strong></span>
+                  </button>
+
+                  <button
+                    onClick={() => { setEditingTx(null); setIsTxModalOpen(true); }}
+                    class="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-500/20 transition active:scale-95"
+                  >
+                    <Icon name="plus" className="w-4 h-4" />
+                    <span>Nova Transação</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* ALERTA DE MANUTENÇÃO SE HOUVER PEÇAS VENCIDAS */}
+            {urgentCount > 0 && (
+              <div class="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2.5">
+                <div class="max-w-7xl mx-auto flex items-center justify-between gap-3 text-xs">
+                  <div class="flex items-center gap-2 text-amber-300">
+                    <Icon name="alertTriangle" className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                    <span><strong>Atenção Motoboy:</strong> Você possui <strong>{urgentCount} item(ns)</strong> de manutenção preventiva com troca recomendada ou vencida!</span>
+                  </div>
+                  <a href="#section-maintenance" class="text-amber-400 hover:text-amber-300 underline font-semibold flex-shrink-0">
+                    Verificar Moto &rarr;
+                  </a>
+                </div>
+              </div>
+            )}
+
+            {/* CORPO PRINCIPAL COM TODAS AS SEÇÕES INTEGRADAS */}
+            <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-10 flex-1 w-full">
+
+              {/* ==================================================== */}
+              {/* SEÇÃO 1: PAINEL & CARDS DE SALDO                    */}
+              {/* ==================================================== */}
+              <section id="section-dashboard" class="scroll-mt-24 space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+                  <div>
+                    <h2 class="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+                      <Icon name="wallet" className="w-6 h-6 text-emerald-400" />
+                      1. Painel Geral & Balanço
+                    </h2>
+                    <p class="text-xs sm:text-sm text-slate-400">Visão consolidada e separada das contas Pessoa Física e Jurídica</p>
+                  </div>
+                  <div class="text-xs text-slate-400 flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span>Meta Mensal: <strong>{formatCurrency(user.monthlyRevenueGoal)}</strong></span>
+                  </div>
+                </div>
+
+                {/* 3 Cards de Saldo */}
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Card Consolidado */}
+                  <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-lg relative overflow-hidden group">
+                    <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-purple-500/5 rounded-full blur-xl group-hover:bg-purple-500/10 transition"></div>
+                    <div class="flex items-center justify-between text-xs text-slate-400 mb-2">
+                      <span class="font-semibold uppercase tracking-wider">Saldo Consolidado</span>
+                      <span class="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 text-[10px] font-bold">PF + PJ</span>
+                    </div>
+                    <div class="text-2xl sm:text-3xl font-extrabold text-white font-mono tracking-tight">
+                      {formatCurrency(totals.totalBalance)}
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
+                      <span class="text-emerald-400 flex items-center gap-1">
+                        <Icon name="trendingUp" className="w-3.5 h-3.5" />
+                        +{formatCurrency(totals.totalIncome)}
+                      </span>
+                      <span class="text-rose-400 flex items-center gap-1">
+                        <Icon name="trendingDown" className="w-3.5 h-3.5" />
+                        -{formatCurrency(totals.totalExpense)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Card PJ (Entregas & Moto) */}
+                  <div class="bg-gradient-to-br from-slate-900 to-emerald-950/20 border border-emerald-500/30 rounded-2xl p-5 shadow-lg relative overflow-hidden group">
+                    <div class="flex items-center justify-between text-xs text-emerald-400 mb-2">
+                      <span class="font-semibold uppercase tracking-wider flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        PJ • Negócio / Entregas
+                      </span>
+                      <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">Profissional</span>
+                    </div>
+                    <div class="text-2xl sm:text-3xl font-extrabold text-emerald-400 font-mono tracking-tight">
+                      {formatCurrency(totals.pjBalance)}
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-emerald-500/20 flex items-center justify-between text-xs">
+                      <span class="text-slate-300 font-medium">Margem: <strong class="text-emerald-400">{totals.pjProfitMargin}%</strong></span>
+                      <span class="text-slate-400">Gasolina: {formatCurrency(totals.fuelCost)}</span>
+                    </div>
+                  </div>
+
+                  {/* Card PF (Pessoal & Família) */}
+                  <div class="bg-gradient-to-br from-slate-900 to-blue-950/20 border border-blue-500/30 rounded-2xl p-5 shadow-lg relative overflow-hidden group">
+                    <div class="flex items-center justify-between text-xs text-blue-400 mb-2">
+                      <span class="font-semibold uppercase tracking-wider flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                        PF • Conta Pessoal
+                      </span>
+                      <span class="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-[10px] font-bold">Particular</span>
+                    </div>
+                    <div class="text-2xl sm:text-3xl font-extrabold text-blue-400 font-mono tracking-tight">
+                      {formatCurrency(totals.pfBalance)}
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-blue-500/20 flex items-center justify-between text-xs">
+                      <span class="text-slate-400">Gastos Pessoais:</span>
+                      <span class="text-rose-400 font-medium">-{formatCurrency(totals.pfExpense)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Barra de Progresso da Meta Mensal PJ */}
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5">
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                    <div class="flex items-center gap-2">
+                      <span class="text-xs font-bold text-slate-300 uppercase tracking-wider">Meta de Faturamento PJ Mensal</span>
+                      <span class="text-xs text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-md">
+                        {totals.goalPercent}% Atingido
+                      </span>
+                    </div>
+                    <div class="text-xs text-slate-400">
+                      Faturado: <strong class="text-white font-mono">{formatCurrency(totals.pjIncome)}</strong> de <span class="font-mono">{formatCurrency(user.monthlyRevenueGoal)}</span>
+                    </div>
+                  </div>
+                  <div class="w-full bg-slate-950 rounded-full h-3.5 p-0.5 border border-slate-800 overflow-hidden">
+                    <div
+                      class="bg-gradient-to-r from-emerald-600 to-emerald-400 h-full rounded-full transition-all duration-500 shadow-sm shadow-emerald-500/50"
+                      style={{ width: `${totals.goalPercent}%` }}
+                    ></div>
+                  </div>
+                </div>
+              </section>
+
+              {/* ==================================================== */}
+              {/* SEÇÃO 2: EXTRATO COMPLETO COM FILTROS & CSV         */}
+              {/* ==================================================== */}
+              <section id="section-transactions" class="scroll-mt-24 space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-3">
+                  <div>
+                    <h2 class="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+                      <Icon name="fileText" className="w-6 h-6 text-emerald-400" />
+                      2. Extrato Financeiro
+                    </h2>
+                    <p class="text-xs sm:text-sm text-slate-400">Histórico de entradas e saídas com categorias e odômetro</p>
+                  </div>
+
+                  <div class="flex items-center gap-2">
+                    <button
+                      onClick={handleExportCSV}
+                      class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition"
+                    >
+                      <Icon name="download" className="w-4 h-4 text-emerald-400" />
+                      <span>Exportar CSV</span>
+                    </button>
+                    <button
+                      onClick={() => { setEditingTx(null); setIsTxModalOpen(true); }}
+                      class="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold rounded-xl text-xs flex items-center gap-1.5 transition"
+                    >
+                      <Icon name="plus" className="w-4 h-4" />
+                      <span>Adicionar</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Barra de Filtros e Pesquisa */}
+                <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+                  {/* Busca */}
+                  <div class="relative flex-1">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                      <Icon name="search" className="w-4 h-4" />
+                    </div>
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Pesquisar por descrição, categoria ou notas..."
+                      class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-4 py-2 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+
+                  {/* Filtro de Tipo */}
+                  <div class="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
+                    <button
+                      onClick={() => setTxTypeFilter('ALL')}
+                      class={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${txTypeFilter === 'ALL' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white'}`}
+                    >
+                      Todos ({transactions.length})
+                    </button>
+                    <button
+                      onClick={() => setTxTypeFilter('INCOME')}
+                      class={`px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1 ${txTypeFilter === 'INCOME' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:text-emerald-400'}`}
+                    >
+                      <Icon name="trendingUp" className="w-3.5 h-3.5" />
+                      Entradas
+                    </button>
+                    <button
+                      onClick={() => setTxTypeFilter('EXPENSE')}
+                      class={`px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1 ${txTypeFilter === 'EXPENSE' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'text-slate-400 hover:text-rose-400'}`}
+                    >
+                      <Icon name="trendingDown" className="w-3.5 h-3.5" />
+                      Saídas
+                    </button>
+                  </div>
+                </div>
+
+                {/* Lista de Transações */}
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden divide-y divide-slate-800/80">
+                  {filteredTransactions.length === 0 ? (
+                    <div class="p-8 text-center text-slate-500 text-sm">
+                      Nenhuma transação encontrada com os filtros selecionados.
+                    </div>
+                  ) : (
+                    filteredTransactions.map(tx => {
+                      const isIncome = tx.type === 'INCOME';
+                      const isPJ = tx.accountType === 'PJ';
+
+                      return (
+                        <div key={tx.id} class="p-4 hover:bg-slate-800/40 transition flex items-center justify-between gap-4">
+                          {/* Ícone e detalhes */}
+                          <div class="flex items-center gap-3.5 min-w-0">
+                            <div class={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                              isIncome ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                            }`}>
+                              <Icon name={isIncome ? 'trendingUp' : (tx.category === 'Combustível' ? 'fuel' : 'trendingDown')} className="w-5 h-5" />
+                            </div>
+
+                            <div class="min-w-0">
+                              <div class="flex items-center gap-2 flex-wrap">
+                                <span class="font-semibold text-white text-sm truncate">{tx.description}</span>
+                                <span class={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                  isPJ ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                                }`}>
+                                  {isPJ ? 'PJ' : 'PF'}
+                                </span>
+                                <span class="text-[11px] text-slate-400 bg-slate-800/60 px-2 py-0.5 rounded">
+                                  {tx.category}
+                                </span>
+                              </div>
+
+                              <div class="flex items-center gap-3 text-xs text-slate-400 mt-1">
+                                <span>{formatDate(tx.date)}</span>
+                                {tx.paymentMethod && <span>• {tx.paymentMethod}</span>}
+                                {tx.odometerKm && (
+                                  <span class="text-amber-400 font-mono font-medium flex items-center gap-1">
+                                    <Icon name="gauge" className="w-3 h-3" />
+                                    {Number(tx.odometerKm).toLocaleString()} km
+                                  </span>
+                                )}
+                                {tx.notes && <span class="hidden md:inline italic text-slate-500">"{tx.notes}"</span>}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Valor e Ações */}
+                          <div class="flex items-center gap-3 flex-shrink-0">
+                            <div class="text-right">
+                              <p class={`text-sm sm:text-base font-bold font-mono ${isIncome ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                {isIncome ? '+' : '-'}{formatCurrency(tx.amount)}
+                              </p>
+                            </div>
+
+                            <div class="flex items-center gap-1">
+                              <button
+                                onClick={() => { setEditingTx(tx); setIsTxModalOpen(true); }}
+                                title="Editar"
+                                class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+                              >
+                                <Icon name="edit" className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteTransaction(tx.id)}
+                                title="Excluir"
+                                class="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition"
+                              >
+                                <Icon name="trash" className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </section>
+
+              {/* ==================================================== */}
+              {/* SEÇÃO 3: MANUTENÇÃO PREVENTIVA DA MOTO              */}
+              {/* ==================================================== */}
+              <section id="section-maintenance" class="scroll-mt-24 space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-3">
+                  <div>
+                    <h2 class="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+                      <Icon name="wrench" className="w-6 h-6 text-amber-400" />
+                      3. Manutenção da Moto ({user.motoModel})
+                    </h2>
+                    <p class="text-xs sm:text-sm text-slate-400">Controle preventivo por quilometragem rodada para não quebrar na rua</p>
+                  </div>
+
+                  <div class="flex items-center gap-2">
+                    <button
+                      onClick={() => { setNewOdometerVal(user.currentOdometer); setIsOdometerModalOpen(true); }}
+                      class="px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 font-semibold rounded-xl text-xs flex items-center gap-1.5 transition"
+                    >
+                      <Icon name="gauge" className="w-4 h-4 text-amber-400" />
+                      <span>Atualizar Odômetro ({user.currentOdometer.toLocaleString()} km)</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Grade de 6 peças da moto */}
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {maintenanceStatus.map(item => {
+                    const isUrgent = item.status === 'urgent';
+                    const isWarning = item.status === 'warning';
+
+                    return (
+                      <div
+                        key={item.id}
+                        class={`bg-slate-900 border rounded-2xl p-5 flex flex-col justify-between transition-all ${
+                          isUrgent
+                            ? 'border-rose-500/50 shadow-lg shadow-rose-500/5'
+                            : isWarning
+                            ? 'border-amber-500/40 shadow-lg shadow-amber-500/5'
+                            : 'border-slate-800'
+                        }`}
+                      >
+                        <div>
+                          <div class="flex items-start justify-between gap-2 mb-3">
+                            <div>
+                              <h3 class="font-bold text-white text-sm">{item.name}</h3>
+                              <p class="text-xs text-slate-400 mt-0.5">Troca a cada <strong class="text-slate-200">{item.intervalKm.toLocaleString()} km</strong></p>
+                            </div>
+                            <span class={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                              isUrgent
+                                ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30 animate-pulse'
+                                : isWarning
+                                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                                : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                            }`}>
+                              {isUrgent ? 'Troca Urgente' : isWarning ? 'Atenção' : 'Em Dia'}
+                            </span>
+                          </div>
+
+                          {/* Barra de Vida Útil */}
+                          <div class="space-y-1.5 my-3">
+                            <div class="flex justify-between text-xs">
+                              <span class="text-slate-400">Rodou: <strong class="text-white font-mono">{item.kmTraveled.toLocaleString()} km</strong></span>
+                              <span class={`font-mono font-bold ${isUrgent ? 'text-rose-400' : isWarning ? 'text-amber-400' : 'text-emerald-400'}`}>
+                                {item.percentUsed}%
+                              </span>
+                            </div>
+                            <div class="w-full bg-slate-950 rounded-full h-2.5 overflow-hidden border border-slate-800">
+                              <div
+                                class={`h-full rounded-full transition-all duration-300 ${
+                                  isUrgent ? 'bg-rose-500' : isWarning ? 'bg-amber-400' : 'bg-emerald-500'
+                                }`}
+                                style={{ width: `${Math.min(100, item.percentUsed)}%` }}
+                              ></div>
+                            </div>
+                            <div class="flex justify-between text-[11px] text-slate-400">
+                              <span>Última troca: {item.lastServiceKm.toLocaleString()} km</span>
+                              <span>
+                                {item.kmRemaining <= 0 ? (
+                                  <strong class="text-rose-400">Vencido há {Math.abs(item.kmRemaining).toLocaleString()} km</strong>
+                                ) : (
+                                  `Resta ${item.kmRemaining.toLocaleString()} km`
+                                )}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Botão Registrar Troca */}
+                        <div class="pt-3 border-t border-slate-800/80 flex items-center justify-between">
+                          <span class="text-xs text-slate-400">Custo estimado: <strong class="text-slate-200">{formatCurrency(item.estimatedCost)}</strong></span>
+                          <button
+                            onClick={() => handleServiceMaintenance(item)}
+                            class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-emerald-600 text-emerald-400 hover:text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition"
+                          >
+                            <Icon name="wrench" className="w-3.5 h-3.5" />
+                            <span>Troquei Hoje</span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+
+              {/* ==================================================== */}
+              {/* SEÇÃO 4: DRE & RELATÓRIOS DO MOTOBOY                */}
+              {/* ==================================================== */}
+              <section id="section-reports" class="scroll-mt-24 space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-3">
+                  <div>
+                    <h2 class="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+                      <Icon name="trendingUp" className="w-6 h-6 text-emerald-400" />
+                      4. DRE Simplificada & Lucro Real
+                    </h2>
+                    <p class="text-xs sm:text-sm text-slate-400">Demonstrativo do Resultado do Exercício com custo por KM</p>
+                  </div>
+
+                  <button
+                    onClick={() => window.print()}
+                    class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition no-print"
+                  >
+                    <Icon name="printer" className="w-4 h-4 text-sky-400" />
+                    <span>Imprimir / Salvar PDF</span>
+                  </button>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Tabela da DRE */}
+                  <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+                    <h3 class="text-sm font-bold text-white uppercase tracking-wider mb-2 flex items-center justify-between">
+                      <span>DRE Operacional (Conta PJ)</span>
+                      <span class="text-xs font-normal text-slate-400">Período Corrente</span>
+                    </h3>
+
+                    <div class="space-y-3 text-sm divide-y divide-slate-800/80">
+                      {/* Receita Bruta */}
+                      <div class="flex items-center justify-between pt-2">
+                        <span class="font-semibold text-slate-200">(+) Receita Bruta PJ (Entregas & Fretes)</span>
+                        <span class="font-bold text-emerald-400 font-mono">{formatCurrency(totals.pjIncome)}</span>
+                      </div>
+
+                      {/* Custos Operacionais */}
+                      <div class="pt-3 space-y-1.5">
+                        <div class="flex items-center justify-between text-slate-400 text-xs">
+                          <span>(-) Combustível da Moto</span>
+                          <span class="text-rose-400 font-mono">-{formatCurrency(totals.fuelCost)}</span>
+                        </div>
+                        <div class="flex items-center justify-between text-slate-400 text-xs">
+                          <span>(-) Manutenção & Peças da Moto</span>
+                          <span class="text-rose-400 font-mono">-{formatCurrency(totals.maintenanceCost)}</span>
+                        </div>
+                        <div class="flex items-center justify-between text-slate-400 text-xs">
+                          <span>(-) Outros Custos Operacionais (Alimentação em trânsito)</span>
+                          <span class="text-rose-400 font-mono">-{formatCurrency(Math.max(0, totals.pjExpense - totals.fuelCost - totals.maintenanceCost))}</span>
+                        </div>
+                      </div>
+
+                      {/* Total Custos Operacionais */}
+                      <div class="flex items-center justify-between pt-3 font-semibold text-slate-300">
+                        <span>(=) Total de Despesas PJ</span>
+                        <span class="text-rose-400 font-mono">-{formatCurrency(totals.pjExpense)}</span>
+                      </div>
+
+                      {/* Lucro Líquido Real PJ */}
+                      <div class="flex items-center justify-between pt-4 text-base font-extrabold bg-slate-950 p-4 rounded-xl border border-emerald-500/30">
+                        <span class="text-white">(=) LUCRO LÍQUIDO REAL (PJ)</span>
+                        <span class="text-emerald-400 font-mono text-lg">{formatCurrency(totals.pjBalance)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Indicadores Chave de Desempenho do Motoboy */}
+                  <div class="space-y-4">
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+                      <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Métricas de Eficiência</h3>
+
+                      <div class="p-3 bg-slate-950 rounded-xl border border-slate-800">
+                        <p class="text-xs text-slate-400">Margem Líquida PJ</p>
+                        <p class="text-2xl font-extrabold text-emerald-400 font-mono mt-0.5">{totals.pjProfitMargin}%</p>
+                        <p class="text-[11px] text-slate-500 mt-1">De cada R$ 100 faturados, sobram R$ {totals.pjProfitMargin}</p>
+                      </div>
+
+                      <div class="p-3 bg-slate-950 rounded-xl border border-slate-800">
+                        <p class="text-xs text-slate-400">Média Combustível x Faturamento</p>
+                        <p class="text-xl font-extrabold text-amber-400 font-mono mt-0.5">
+                          {totals.pjIncome > 0 ? ((totals.fuelCost / totals.pjIncome) * 100).toFixed(1) : 0}%
+                        </p>
+                        <p class="text-[11px] text-slate-500 mt-1">Impacto da gasolina sobre a receita de entregas</p>
+                      </div>
+
+                      <div class="p-3 bg-slate-950 rounded-xl border border-slate-800">
+                        <p class="text-xs text-slate-400">Sugestão de Pró-Labore (Transferência PJ &rarr; PF)</p>
+                        <p class="text-lg font-bold text-blue-400 font-mono mt-0.5">
+                          {formatCurrency(Math.max(0, totals.pjBalance * 0.7))}
+                        </p>
+                        <p class="text-[11px] text-slate-500 mt-1">70% do lucro para casa, 30% como reserva de emergência da moto</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+            </main>
+
+            {/* BARRA FIXA DE NAVEGAÇÃO MOBILE */}
+            <div class="lg:hidden fixed bottom-0 inset-x-0 bg-slate-950/95 backdrop-blur-md border-t border-slate-800 px-4 py-2 z-40">
+              <div class="flex items-center justify-around">
+                <a href="#section-dashboard" class="flex flex-col items-center gap-1 text-slate-400 hover:text-white p-1">
+                  <Icon name="wallet" className="w-5 h-5 text-emerald-400" />
+                  <span class="text-[10px] font-semibold">Painel</span>
+                </a>
+                <a href="#section-transactions" class="flex flex-col items-center gap-1 text-slate-400 hover:text-white p-1">
+                  <Icon name="fileText" className="w-5 h-5" />
+                  <span class="text-[10px] font-semibold">Extrato</span>
+                </a>
+                <button
+                  onClick={() => { setEditingTx(null); setIsTxModalOpen(true); }}
+                  class="w-12 h-12 -mt-5 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center shadow-lg shadow-emerald-500/30 font-bold active:scale-95"
+                >
+                  <Icon name="plus" className="w-6 h-6 stroke-[3]" />
+                </button>
+                <a href="#section-maintenance" class="flex flex-col items-center gap-1 text-slate-400 hover:text-white p-1 relative">
+                  <Icon name="wrench" className="w-5 h-5 text-amber-400" />
+                  <span class="text-[10px] font-semibold">Moto</span>
+                  {urgentCount > 0 && <span class="absolute top-1 right-2 w-2 h-2 rounded-full bg-rose-500"></span>}
+                </a>
+                <a href="#section-reports" class="flex flex-col items-center gap-1 text-slate-400 hover:text-white p-1">
+                  <Icon name="trendingUp" className="w-5 h-5 text-blue-400" />
+                  <span class="text-[10px] font-semibold">DRE</span>
+                </a>
+              </div>
+            </div>
+
+            {/* ========================================== */}
+            {/* MODAL: NOVA OU EDITAR TRANSAÇÃO           */}
+            {/* ========================================== */}
+            {isTxModalOpen && (
+              <div class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl relative">
+                  <div class="flex items-center justify-between pb-4 border-b border-slate-800 mb-4">
+                    <h3 class="font-bold text-lg text-white">
+                      {editingTx ? 'Editar Transação' : 'Nova Transação'}
+                    </h3>
+                    <button
+                      onClick={() => setIsTxModalOpen(false)}
+                      class="text-slate-400 hover:text-white p-1 rounded-lg"
+                    >
+                      <Icon name="close" className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const form = e.target;
+                      handleSaveTransaction({
+                        description: form.description.value,
+                        amount: parseFloat(form.amount.value) || 0,
+                        date: form.date.value,
+                        accountType: form.accountType.value,
+                        type: form.type.value,
+                        category: form.category.value,
+                        paymentMethod: form.paymentMethod.value,
+                        odometerKm: form.odometerKm.value ? Number(form.odometerKm.value) : null,
+                        notes: form.notes.value
+                      });
+                    }}
+                    class="space-y-4"
+                  >
+                    {/* Tipo: Receita ou Despesa */}
+                    <div class="grid grid-cols-2 gap-2">
+                      <label class="cursor-pointer">
+                        <input
+                          type="radio"
+                          name="type"
+                          value="INCOME"
+                          defaultChecked={editingTx ? editingTx.type === 'INCOME' : true}
+                          class="peer sr-only"
+                        />
+                        <div class="p-2.5 text-center rounded-xl border border-slate-800 peer-checked:border-emerald-500 peer-checked:bg-emerald-500/10 peer-checked:text-emerald-400 text-slate-400 text-xs font-bold transition">
+                          + Receita (Entrada)
+                        </div>
+                      </label>
+                      <label class="cursor-pointer">
+                        <input
+                          type="radio"
+                          name="type"
+                          value="EXPENSE"
+                          defaultChecked={editingTx ? editingTx.type === 'EXPENSE' : false}
+                          class="peer sr-only"
+                        />
+                        <div class="p-2.5 text-center rounded-xl border border-slate-800 peer-checked:border-rose-500 peer-checked:bg-rose-500/10 peer-checked:text-rose-400 text-slate-400 text-xs font-bold transition">
+                          - Despesa (Saída)
+                        </div>
+                      </label>
+                    </div>
+
+                    {/* Conta: PJ ou PF */}
+                    <div class="grid grid-cols-2 gap-2">
+                      <label class="cursor-pointer">
+                        <input
+                          type="radio"
+                          name="accountType"
+                          value="PJ"
+                          defaultChecked={editingTx ? editingTx.accountType === 'PJ' : true}
+                          class="peer sr-only"
+                        />
+                        <div class="p-2.5 text-center rounded-xl border border-slate-800 peer-checked:border-emerald-500 peer-checked:bg-emerald-500/10 peer-checked:text-emerald-400 text-slate-400 text-xs font-bold transition">
+                          Conta PJ (Entregas & Moto)
+                        </div>
+                      </label>
+                      <label class="cursor-pointer">
+                        <input
+                          type="radio"
+                          name="accountType"
+                          value="PF"
+                          defaultChecked={editingTx ? editingTx.accountType === 'PF' : false}
+                          class="peer sr-only"
+                        />
+                        <div class="p-2.5 text-center rounded-xl border border-slate-800 peer-checked:border-blue-500 peer-checked:bg-blue-500/10 peer-checked:text-blue-400 text-slate-400 text-xs font-bold transition">
+                          Conta PF (Pessoal & Casa)
+                        </div>
+                      </label>
+                    </div>
+
+                    {/* Descrição & Valor */}
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div class="sm:col-span-2">
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Descrição</label>
+                        <input
+                          type="text"
+                          name="description"
+                          defaultValue={editingTx ? editingTx.description : ''}
+                          placeholder="Ex: Diária iFood, Gasolina Shell..."
+                          required
+                          class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                        />
+                      </div>
+                      <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Valor (R$)</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          name="amount"
+                          defaultValue={editingTx ? editingTx.amount : ''}
+                          placeholder="0,00"
+                          required
+                          class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Categoria & Forma de Pagamento */}
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Categoria</label>
+                        <select
+                          name="category"
+                          defaultValue={editingTx ? editingTx.category : 'Entregas'}
+                          class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                        >
+                          <optgroup label="PJ (Profissional)">
+                            <option value="Entregas">Entregas (Apps / iFood / Loggi)</option>
+                            <option value="Frete Particular">Frete Particular</option>
+                            <option value="Combustível">Combustível</option>
+                            <option value="Manutenção Moto">Manutenção Moto</option>
+                            <option value="Alimentação Rua">Alimentação na Rua</option>
+                            <option value="MEI / DAS">MEI / DAS / Impostos</option>
+                            <option value="Acessórios Moto">Acessórios Moto (Capa, Baú)</option>
+                          </optgroup>
+                          <optgroup label="PF (Pessoal)">
+                            <option value="Mercado">Mercado & Alimentação</option>
+                            <option value="Moradia">Moradia (Aluguel, Luz, Água)</option>
+                            <option value="Contas Fixas">Contas Fixas (Internet, Celular)</option>
+                            <option value="Lazer & Família">Lazer & Família</option>
+                            <option value="Saúde & Farmácia">Saúde & Farmácia</option>
+                            <option value="Outros">Outros</option>
+                          </optgroup>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Pagamento</label>
+                        <select
+                          name="paymentMethod"
+                          defaultValue={editingTx ? editingTx.paymentMethod : 'PIX'}
+                          class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                        >
+                          <option value="PIX">PIX</option>
+                          <option value="Cartão Débito">Cartão de Débito</option>
+                          <option value="Cartão Crédito">Cartão de Crédito</option>
+                          <option value="Dinheiro">Dinheiro em Espécie</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Data & KM do Odômetro */}
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Data</label>
+                        <input
+                          type="date"
+                          name="date"
+                          defaultValue={editingTx ? editingTx.date : new Date().toISOString().slice(0, 10)}
+                          required
+                          class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Odômetro Atual (KM - Opcional)</label>
+                        <input
+                          type="number"
+                          name="odometerKm"
+                          defaultValue={editingTx && editingTx.odometerKm ? editingTx.odometerKm : user.currentOdometer}
+                          placeholder="Ex: 48320"
+                          class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Observações */}
+                    <div>
+                      <label class="block text-xs font-semibold text-slate-300 mb-1">Observações (Opcional)</label>
+                      <input
+                        type="text"
+                        name="notes"
+                        defaultValue={editingTx ? editingTx.notes : ''}
+                        placeholder="Ex: Abastecimento de 10 litros, troca de óleo 10w30..."
+                        class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+
+                    {/* Botões Salvar/Cancelar */}
+                    <div class="pt-3 flex items-center justify-end gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setIsTxModalOpen(false)}
+                        class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        class="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs shadow-lg shadow-emerald-500/20 transition"
+                      >
+                        {editingTx ? 'Salvar Alterações' : 'Adicionar Transação'}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            {/* ========================================== */}
+            {/* MODAL: ATUALIZAR ODÔMETRO DA MOTO         */}
+            {/* ========================================== */}
+            {isOdometerModalOpen && (
+              <div class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-6 shadow-2xl relative">
+                  <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+                    <h3 class="font-bold text-base text-white flex items-center gap-2">
+                      <Icon name="gauge" className="w-5 h-5 text-amber-400" />
+                      Atualizar Odômetro
+                    </h3>
+                    <button
+                      onClick={() => setIsOdometerModalOpen(false)}
+                      class="text-slate-400 hover:text-white"
+                    >
+                      <Icon name="close" className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <form onSubmit={handleUpdateOdometer} class="space-y-4">
+                    <p class="text-xs text-slate-400">
+                      Informe a quilometragem atual do painel da sua moto para recalcular automaticamente os prazos de troca de óleo, kit relação e pneus.
+                    </p>
+
+                    <div>
+                      <label class="block text-xs font-semibold text-slate-300 mb-1.5">KM Atual da Moto</label>
+                      <div class="relative">
+                        <input
+                          type="number"
+                          value={newOdometerVal}
+                          onChange={(e) => setNewOdometerVal(e.target.value)}
+                          required
+                          class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-lg font-bold font-mono text-amber-400 focus:outline-none focus:border-amber-400"
+                        />
+                        <span class="absolute right-4 top-3 text-xs font-bold text-slate-500">KM</span>
+                      </div>
+                    </div>
+
+                    <div class="flex items-center justify-end gap-2 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setIsOdometerModalOpen(false)}
+                        class="px-3 py-2 text-xs font-semibold text-slate-400 hover:text-white"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl shadow transition"
+                      >
+                        Atualizar KM
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            {/* ========================================== */}
+            {/* MODAL: PERFIL DO USUÁRIO & MOTO           */}
+            {/* ========================================== */}
+            {isProfileModalOpen && (
+              <div class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
+                  <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+                    <h3 class="font-bold text-base text-white flex items-center gap-2">
+                      <Icon name="user" className="w-5 h-5 text-emerald-400" />
+                      Perfil do Motoboy & Moto
+                    </h3>
+                    <button
+                      onClick={() => setIsProfileModalOpen(false)}
+                      class="text-slate-400 hover:text-white"
+                    >
+                      <Icon name="close" className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const f = e.target;
+                      setUser(u => ({
+                        ...u,
+                        name: f.name.value,
+                        motoModel: f.motoModel.value,
+                        motoPlate: f.motoPlate.value,
+                        monthlyRevenueGoal: Number(f.monthlyRevenueGoal.value) || 4500,
+                        password: f.password.value || u.password
+                      }));
+                      setIsProfileModalOpen(false);
+                    }}
+                    class="space-y-3"
+                  >
+                    <div>
+                      <label class="block text-xs font-semibold text-slate-300 mb-1">Nome Completo</label>
+                      <input
+                        type="text"
+                        name="name"
+                        defaultValue={user.name}
+                        required
+                        class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                      <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Modelo da Moto</label>
+                        <input
+                          type="text"
+                          name="motoModel"
+                          defaultValue={user.motoModel}
+                          required
+                          class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                        />
+                      </div>
+                      <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Placa</label>
+                        <input
+                          type="text"
+                          name="motoPlate"
+                          defaultValue={user.motoPlate}
+                          class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label class="block text-xs font-semibold text-slate-300 mb-1">Meta Mensal de Faturamento (R$)</label>
+                      <input
+                        type="number"
+                        name="monthlyRevenueGoal"
+                        defaultValue={user.monthlyRevenueGoal}
+                        required
+                        class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 font-mono"
+                      />
+                    </div>
+
+                    <div>
+                      <label class="block text-xs font-semibold text-slate-300 mb-1">Senha de Acesso</label>
+                      <input
+                        type="text"
+                        name="password"
+                        defaultValue={user.password}
+                        required
+                        class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 font-mono"
+                      />
+                    </div>
+
+                    <div class="flex items-center justify-end gap-2 pt-3">
+                      <button
+                        type="button"
+                        onClick={() => setIsProfileModalOpen(false)}
+                        class="px-3 py-2 text-xs font-semibold text-slate-400 hover:text-white"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs rounded-xl shadow transition"
+                      >
+                        Salvar Perfil
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            {/* ========================================== */}
+            {/* MODAL: CLOUDFLARE PAGES & DOWNLOAD        */}
+            {/* ========================================== */}
+            {isCloudflareModalOpen && (
+              <div class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl relative space-y-4">
+                  <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+                    <h3 class="font-bold text-base text-white flex items-center gap-2">
+                      <Icon name="cloud" className="w-5 h-5 text-sky-400" />
+                      Como Postar no Cloudflare Pages
+                    </h3>
+                    <button
+                      onClick={() => setIsCloudflareModalOpen(false)}
+                      class="text-slate-400 hover:text-white"
+                    >
+                      <Icon name="close" className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <p class="text-xs text-slate-300 leading-relaxed">
+                    Este aplicativo está <strong>100% contido neste único arquivo index.html</strong>. Não há necessidade de build complexo ou pastas extras para hospedar.
+                  </p>
+
+                  <div class="space-y-2 text-xs bg-slate-950 p-4 rounded-xl border border-slate-800">
+                    <p class="font-bold text-emerald-400">Passo a passo no Cloudflare Pages:</p>
+                    <ol class="list-decimal list-inside space-y-1.5 text-slate-400">
+                      <li>Acesse o painel do Cloudflare (<span class="text-slate-200">dash.cloudflare.com</span>)</li>
+                      <li>Vá em <strong>Workers & Pages</strong> &rarr; <strong>Create application</strong> &rarr; <strong>Pages</strong></li>
+                      <li>Escolha <strong>Upload assets</strong> (Direct Upload)</li>
+                      <li>Coloque este arquivo <code class="text-emerald-400 font-mono">index.html</code> dentro de uma pasta e faça o upload</li>
+                      <li>Pronto! Seu link oficial estará no ar em segundos!</li>
+                    </ol>
+                  </div>
+
+                  <div class="pt-2 flex flex-col gap-2">
+                    <button
+                      onClick={handleDownloadSingleFile}
+                      class="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition active:scale-95"
+                    >
+                      <Icon name="download" className="w-4 h-4" />
+                      <span>Baixar este index.html Standalone</span>
+                    </button>
+                    <button
+                      onClick={() => setIsCloudflareModalOpen(false)}
+                      class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold transition"
+                    >
+                      Fechar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* RODAPÉ */}
+            <footer class="mt-auto border-t border-slate-900 bg-slate-950 py-6 px-4 text-center text-xs text-slate-400 no-print">
+              <p>FinanAutônomo • Aplicativo 100% Consolidado em Página Única (index.html)</p>
+              <p class="text-[11px] text-slate-500 mt-1">Desenvolvido especialmente para autônomos e motoboys • Dados seguros no seu navegador</p>
+            </footer>
+          </div>
+        );
+      }
+
+      // Renderiza na div root
+      ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+  </body>
+</html>
